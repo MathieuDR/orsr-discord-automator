@@ -1,5 +1,7 @@
 using DiscordBot.Common.Dtos.Runescape;
+using DiscordBot.Common.Identities;
 using DiscordBot.Common.Models.Data;
+using DiscordBot.Common.Models.Data.Drops;
 using DiscordBot.Data.Interfaces;
 using DiscordBot.Data.Strategies;
 using DiscordBot.Services.Interfaces;
@@ -22,7 +24,7 @@ public class HandleRunescapeDropJob : RepositoryJob {
     }
 
     protected override async Task<Result> DoWork() {
-        var endpoint = Context.MergedJobDataMap.GetGuidValue("endpoint");
+        var endpoint = new DiscordUserId(Context.MergedJobDataMap.GetLongValue("endpoint"));
         var repo = RepositoryStrategy.GetOrCreateRepository<IRuneScapeDropDataRepository>();
         var data = repo.GetActive(endpoint).Value;
 
@@ -72,7 +74,7 @@ public class HandleRunescapeDropJob : RepositoryJob {
         return data with { Drops = drops };
     }
 
-    private async Task<Result<bool>> HandleMessagesForGuilds(Guid endpoint, RunescapeDropData data, List<ulong> guildIds) {
+    private async Task<Result<bool>> HandleMessagesForGuilds(DiscordUserId endpoint, RunescapeDropData data, List<DiscordGuildId> guildIds) {
         var errors = new List<IError>();
         var sentAnyMessages = false;
 
@@ -86,7 +88,7 @@ public class HandleRunescapeDropJob : RepositoryJob {
                 continue;
             }
 
-            var repo = RepositoryStrategy.GetOrCreateRepository<IRunescapeDropperGuidConfigurationRepository>(guildId);
+            var repo = RepositoryStrategy.GetOrCreateRepository<IRunescapeDropperGuildConfigurationRepository>(guildId);
             var configurationResult = repo.GetSingle();
             if (configurationResult.IsFailed) {
                 errors.AddRange(configurationResult.Errors);
@@ -94,8 +96,8 @@ public class HandleRunescapeDropJob : RepositoryJob {
             }
 
             foreach (var channelConfiguration in configurationResult.Value.EnabledChannels) {
-                var filteredDada = await FilterData(data, channelConfiguration);
-                sentAnyMessages = sentAnyMessages || SendData(guildId, channelConfiguration.Channel, filteredDada);
+                var filterData = await FilterData(data, channelConfiguration);
+                sentAnyMessages = sentAnyMessages || SendData(guildId, channelConfiguration.Channel, filterData);
             }
 
             messagedGuilds.Add(guildId);
@@ -104,7 +106,7 @@ public class HandleRunescapeDropJob : RepositoryJob {
         return Result.FailIf(!errors.Any(), "Some guilds failed").WithErrors(errors).ToResult(sentAnyMessages);
     }
 
-    private bool SendData(ulong guildId, ulong channelId, RunescapeDropData toSendData) {
+    private bool SendData(DiscordGuildId guildId, DiscordChannelId channelId, RunescapeDropData toSendData) {
         if (toSendData is null) {
             return false;
         }
@@ -113,8 +115,8 @@ public class HandleRunescapeDropJob : RepositoryJob {
         return true;
     }
 
-    private IEnumerable<ulong> GetGuildIdsForEndpoint(Guid endpoint) {
-        return new ulong[] { 403539795944538122 };
+    private IEnumerable<DiscordGuildId> GetGuildIdsForEndpoint(DiscordUserId endpoint) {
+        return new DiscordGuildId[] { new (403539795944538122) };
     }
 
     private async Task<RunescapeDropData> FilterData(RunescapeDropData data, RunescapeDropperChannelConfiguration configuration) {

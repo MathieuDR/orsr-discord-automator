@@ -1,4 +1,5 @@
 using DiscordBot.Common.Models.Data;
+using DiscordBot.Common.Models.Data.Graveyard;
 using DiscordBot.Common.Models.Enums;
 using DiscordBot.Data.Interfaces;
 using FluentResults;
@@ -12,7 +13,7 @@ internal class GraveyardRepository : BaseSingleRecordLiteDbRepository<Graveyard>
 	public GraveyardRepository(ILogger logger, LiteDatabase database) : base(logger, database) { }
 	public override string CollectionName => "graveyard";
 	
-	public Result<List<Shame>> GetShamesForUser(ulong userId) {
+	public Result<List<Shame>> GetShamesForUser(DiscordUserId userId) {
 		var graveyard = GetGraveyardOrFail();
 		if (graveyard.IsFailed) {
 			return graveyard.ToResult();
@@ -22,7 +23,7 @@ internal class GraveyardRepository : BaseSingleRecordLiteDbRepository<Graveyard>
 		return Result.Ok(shames);
 	}
 
-	public Result<Dictionary<ulong, List<Shame>>> GetShamesPerLocation(ShameLocation location, MetricType? metricTypeLocation = null) {
+	public Result<Dictionary<DiscordUserId, List<Shame>>> GetShamesPerLocation(ShameLocation location, MetricType? metricTypeLocation = null) {
 		var graveyard = GetGraveyardOrFail();
 		if (graveyard.IsFailed) {
 			return graveyard.ToResult();
@@ -44,7 +45,7 @@ internal class GraveyardRepository : BaseSingleRecordLiteDbRepository<Graveyard>
 		return Result.Ok(shameList);
 	}
 
-	public Result<List<Shame>> GetShamesForUserPerLocation(ulong userId, ShameLocation location, MetricType? metricTypeLocation = null) {
+	public Result<List<Shame>> GetShamesForUserPerLocation(DiscordUserId userId, ShameLocation location, MetricType? metricTypeLocation = null) {
 		var shames = GetShamesForUser(userId);
 		
 		if (shames.IsFailed) {
@@ -55,7 +56,7 @@ internal class GraveyardRepository : BaseSingleRecordLiteDbRepository<Graveyard>
 		return Result.Ok(filteredShames);
 	}
 
-	public Result AddShame(ulong userId, Shame shame) {
+	public Result AddShame(DiscordUserId userId, Shame shame) {
 		var graveyard = GetGraveyardOrFail();
 		
 		if (graveyard.IsFailed) {
@@ -73,7 +74,7 @@ internal class GraveyardRepository : BaseSingleRecordLiteDbRepository<Graveyard>
 		return Update(graveyard.Value);
 	}
 
-	public Result RemoveShame(ulong userId, Guid shameId) {
+	public Result RemoveShame(DiscordUserId userId, Guid shameId) {
 		var graveyard = GetGraveyardOrFail();
 		
 		if (graveyard.IsFailed) {
